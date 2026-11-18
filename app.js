@@ -189,15 +189,22 @@ function criarBotao(texto, aoClicar) {
   return botao;
 }
 
+let esperaFilme;
+let ultimaBuscaFilme = 0;
+
 async function buscarNoTmdb() {
-  const titulo = textoOuNulo(elemento("titulo").value);
-  if (!titulo) {
-    avisar("Digite o título antes de buscar.");
+  const titulo = elemento("titulo").value.trim();
+  const minhaBusca = ++ultimaBuscaFilme;
+
+  if (titulo.length < 3) {
+    limparTmdb();
     return;
   }
 
   avisar("Buscando...");
   const { data, error } = await banco.functions.invoke("tmdb", { body: { titulo } });
+
+  if (minhaBusca !== ultimaBuscaFilme) return;
 
   if (error) {
     avisar("A busca no TMDB falhou. Preencha os campos manualmente.");
@@ -214,6 +221,8 @@ async function buscarNoTmdb() {
 }
 
 async function escolherFilme(id) {
+  clearTimeout(esperaFilme);
+  ultimaBuscaFilme++;
   const { data, error } = await banco.functions.invoke("tmdb", { body: { id } });
 
   if (error) {
@@ -246,8 +255,11 @@ function aoEditarTitulo() {
   limparTmdb();
 }
 
-elemento("buscar-tmdb").addEventListener("click", buscarNoTmdb);
-elemento("titulo").addEventListener("input", aoEditarTitulo);
+elemento("titulo").addEventListener("input", () => {
+  aoEditarTitulo();
+  clearTimeout(esperaFilme);
+  esperaFilme = setTimeout(buscarNoTmdb, 500);
+});
 
 elemento("form-filme").addEventListener("reset", () => {
   limparTmdb();
@@ -268,16 +280,23 @@ function limparTmdbSerie() {
   elemento("generos-tmdb-serie").replaceChildren();
 }
 
+let esperaSerie;
+let ultimaBuscaSerie = 0;
+
 async function buscarSerieNoTmdb() {
-  const texto = textoOuNulo(elemento("serie-titulo").value);
-  if (!texto) {
-    avisar("Digite o nome da série antes de buscar.");
+  const texto = elemento("serie-titulo").value.trim();
+  const { nome, temporada } = separarTemporada(texto);
+  const minhaBusca = ++ultimaBuscaSerie;
+
+  if (nome.length < 3) {
+    limparTmdbSerie();
     return;
   }
 
-  const { nome, temporada } = separarTemporada(texto);
   avisar("Buscando...");
   const { data, error } = await banco.functions.invoke("tmdb", { body: { tipo: "serie", titulo: nome } });
+
+  if (minhaBusca !== ultimaBuscaSerie) return;
 
   if (error) {
     avisar("A busca no TMDB falhou. Preencha os campos manualmente.");
@@ -294,6 +313,8 @@ async function buscarSerieNoTmdb() {
 }
 
 async function escolherSerie(id, temporada) {
+  clearTimeout(esperaSerie);
+  ultimaBuscaSerie++;
   const { data, error } = await banco.functions.invoke("tmdb", { body: { tipo: "serie", id } });
 
   if (error) {
@@ -319,8 +340,11 @@ function aoEditarTituloSerie() {
   limparTmdbSerie();
 }
 
-elemento("buscar-tmdb-serie").addEventListener("click", buscarSerieNoTmdb);
-elemento("serie-titulo").addEventListener("input", aoEditarTituloSerie);
+elemento("serie-titulo").addEventListener("input", () => {
+  aoEditarTituloSerie();
+  clearTimeout(esperaSerie);
+  esperaSerie = setTimeout(buscarSerieNoTmdb, 500);
+});
 
 elemento("form-serie").addEventListener("reset", () => {
   limparTmdbSerie();

@@ -3,12 +3,20 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Registro de Filmes</title>
+  <title>Diário de Filmes</title>
+  <script>
+    document.documentElement.dataset.tema =
+      localStorage.getItem("tema") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "escuro" : "claro");
+  </script>
   <link rel="stylesheet" href="estilo.css">
 </head>
 <body>
   <main>
-    <h1>Registro de Filmes</h1>
+    <div class="topo">
+      <h1>Diário de Filmes</h1>
+      <button id="trocar-tema" type="button" class="secundario">Modo escuro</button>
+    </div>
 
     <section id="tela-login">
       <h2>Entrar</h2>
@@ -16,8 +24,8 @@
         <label>E-mail <input id="email" type="email" required autocomplete="username"></label>
         <label for="senha">Senha</label>
         <div class="campo-senha">
-            <input id="senha" type="password" required autocomplete="current-password">
-            <button id="ver-senha" type="button" class="secundario" aria-pressed="false">Mostrar</button>
+          <input id="senha" type="password" required autocomplete="current-password">
+          <button id="ver-senha" type="button" class="secundario" aria-pressed="false">Mostrar</button>
         </div>
         <button type="submit">Entrar</button>
       </form>
@@ -26,42 +34,61 @@
     <section id="tela-app" hidden>
       <button id="sair" type="button" class="secundario">Sair</button>
 
-      <h2>Registrar filme</h2>
-      <form id="form-filme">
-        <label>Título <input id="titulo" required></label>
-        <button id="buscar-tmdb" type="button" class="secundario">Buscar no TMDB</button>
-        <div id="candidatos" class="opcoes"></div>
-        <label>Nota de 0 a 10 <input id="nota" type="number" min="0" max="10" step="0.05" required></label>
-        <label>Data em que assistiu <input id="data" type="date" required></label>
-        <label>Gênero <input id="genero" list="generos"></label>
-        <datalist id="generos"></datalist>
-        <div id="generos-tmdb" class="opcoes"></div>
-        <label>Duração (min) <input id="minutos" type="number" min="1" step="1"></label>
-        <label>Ano de lançamento <input id="lancamento" type="number" min="1880" max="2100" step="1"></label>
-        <label>Plataforma <input id="plataforma" list="plataformas"></label>
-        <datalist id="plataformas"></datalist>
-        <button type="submit">Salvar</button>
-      </form>
+      <h2>Painel</h2>
+      <div id="kpis" class="kpis"></div>
+      <div class="graficos">
+        <div><canvas id="grafico-ano"></canvas></div>
+        <div><canvas id="grafico-genero"></canvas></div>
+      </div>
 
-      <h2>Últimos filmes</h2>
-      <ol id="ultimos"></ol>
+      <div class="registros">
+        <section class="bloco">
+          <h2>Registrar filme</h2>
+          <form id="form-filme">
+            <label>Título <input id="titulo" required></label>
+            <button id="buscar-tmdb" type="button" class="secundario">Buscar no TMDB</button>
+            <div id="candidatos" class="opcoes"></div>
+            <label>Nota de 0 a 10 <input id="nota" type="number" min="0" max="10" step="0.05" required></label>
+            <label>Data em que assistiu <input id="data" type="date" required></label>
+            <label>Gênero <input id="genero" list="generos"></label>
+            <datalist id="generos"></datalist>
+            <div id="generos-tmdb" class="opcoes"></div>
+            <label>Duração (min) <input id="minutos" type="number" min="1" step="1"></label>
+            <label>Ano de lançamento <input id="lancamento" type="number" min="1880" max="2100" step="1"></label>
+            <label>Plataforma <input id="plataforma" list="plataformas"></label>
+            <datalist id="plataformas"></datalist>
+            <button type="submit">Salvar</button>
+            <button type="reset" class="secundario">Limpar campos</button>
+          </form>
 
-      <h2>Registrar série</h2>
-      <form id="form-serie">
-        <label>Série e temporada <input id="serie-titulo" required></label>
-        <label>Nota (em branco se ainda está vendo) <input id="serie-nota" type="number" min="0" max="10" step="0.05"></label>
-        <label>Início <input id="serie-inicio" type="date" required></label>
-        <label>Fim <input id="serie-fim" type="date"></label>
-        <label>Gênero <input id="serie-genero" list="generos"></label>
-        <label>Plataforma <input id="serie-plataforma" list="plataformas"></label>
-        <button type="submit">Salvar série</button>
-      </form>
+          <h2>Últimos filmes</h2>
+          <ol id="ultimos"></ol>
+        </section>
+
+        <section class="bloco">
+          <h2>Registrar série</h2>
+          <form id="form-serie">
+            <label>Série e temporada <input id="serie-titulo" required></label>
+            <button id="buscar-tmdb-serie" type="button" class="secundario">Buscar no TMDB</button>
+            <div id="candidatos-serie" class="opcoes"></div>
+            <label>Nota (em branco se ainda está vendo) <input id="serie-nota" type="number" min="0" max="10" step="0.05"></label>
+            <label>Início <input id="serie-inicio" type="date" required></label>
+            <label>Fim <input id="serie-fim" type="date"></label>
+            <label>Gênero <input id="serie-genero" list="generos"></label>
+            <div id="generos-tmdb-serie" class="opcoes"></div>
+            <label>Plataforma <input id="serie-plataforma" list="plataformas"></label>
+            <button type="submit">Salvar série</button>
+            <button type="reset" class="secundario">Limpar campos</button>
+          </form>
+        </section>
+      </div>
     </section>
 
     <p id="aviso" role="status"></p>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
