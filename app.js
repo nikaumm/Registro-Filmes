@@ -68,6 +68,7 @@ async function preencherSugestoes(coluna, idLista) {
 async function carregarTudo() {
   await Promise.all([
     carregarUltimos(),
+    carregarPainel(),
     preencherSugestoes("genero", "generos"),
     preencherSugestoes("plataforma", "plataformas"),
   ]);
@@ -87,7 +88,8 @@ elemento("ver-senha").addEventListener("click", () => {
 
 // 5. Login e saída
 elemento("form-login").addEventListener("submit", async (evento) => {
-  evento.preventDefault(); definirSenhaVisivel(false);
+  evento.preventDefault();
+  definirSenhaVisivel(false);
   avisar("Entrando...");
 
   const { error } = await banco.auth.signInWithPassword({
@@ -96,8 +98,7 @@ elemento("form-login").addEventListener("submit", async (evento) => {
   });
 
   if (error) {
-    avisar("Erro: " + error.message);
-    //avisar("Não foi possível entrar. Confira e-mail e senha.");
+    avisar("Não foi possível entrar. Confira e-mail e senha.");
     return;
   }
 
@@ -137,7 +138,8 @@ elemento("form-filme").addEventListener("submit", async (evento) => {
   avisar(`${novoFilme.titulo} foi salvo.`);
   evento.target.reset();
   elemento("data").value = hoje();
-  await carregarUltimos();
+  limparTmdb();
+  await carregarTudo();
 });
 
 // 7. Salvar uma série
@@ -156,7 +158,7 @@ elemento("form-serie").addEventListener("submit", async (evento) => {
     plataforma: textoOuNulo(elemento("serie-plataforma").value),
   };
 
-  const { error } = await banco.from("series").insert(novaSerie);
+  const { error } = await banco.from("series").insert({ ...novaSerie, ...dadosTmdbSerie });
 
   if (error) {
     avisar("Não foi possível salvar: " + error.message);
@@ -166,6 +168,7 @@ elemento("form-serie").addEventListener("submit", async (evento) => {
   avisar(`${novaSerie.titulo} foi salva.`);
   evento.target.reset();
   elemento("serie-inicio").value = hoje();
+  limparTmdbSerie();
 });
 
 // 9. Busca no TMDB
@@ -234,8 +237,171 @@ async function escolherFilme(id) {
   avisar("Dados preenchidos. Confira antes de salvar.");
 }
 
+function aoEditarTitulo() {
+  if (dadosTmdb.tmdb_id) {
+    elemento("genero").value = "";
+    elemento("minutos").value = "";
+    elemento("lancamento").value = "";
+  }
+  limparTmdb();
+}
+
 elemento("buscar-tmdb").addEventListener("click", buscarNoTmdb);
-elemento("titulo").addEventListener("input", limparTmdb);
+elemento("titulo").addEventListener("input", aoEditarTitulo);
+
+elemento("form-filme").addEventListener("reset", () => {
+  limparTmdb();
+  setTimeout(() => { elemento("data").value = hoje(); });
+});
+
+// Busca de séries no TMDB
+let dadosTmdbSerie = {};
+
+function separarTemporada(texto) {
+  const partes = texto.match(/^(.*?)\s+S(\d+)$/i);
+  return partes ? { nome: partes[1], temporada: partes[2] } : { nome: texto, temporada: null };
+}
+
+function limparTmdbSerie() {
+  dadosTmdbSerie = {};
+  elemento("candidatos-serie").replaceChildren();
+  elemento("generos-tmdb-serie").replaceChildren();
+}
+
+async function buscarSerieNoTmdb() {
+  const texto = textoOuNulo(elemento("serie-titulo").value);
+  if (!texto) {
+    avisar("Digite o nome da série antes de buscar.");
+    return;
+  }
+
+  const { nome, temporada } = separarTemporada(texto);
+  avisar("Buscando...");
+  const { data, error } = await banco.functions.invoke("tmdb", { body: { tipo: "serie", titulo: nome } });
+
+  if (error) {
+    avisar("A busca no TMDB falhou. Preencha os campos manualmente.");
+    return;
+  }
+
+  avisar(data.candidatos.length ? "Escolha a série certa:" : "Nenhuma série encontrada.");
+  limparTmdbSerie();
+
+  for (const candidato of data.candidatos) {
+    const rotulo = `${candidato.titulo} (${candidato.ano_lancamento ?? "sem ano"})`;
+    elemento("candidatos-serie").appendChild(criarBotao(rotulo, () => escolherSerie(candidato.id, temporada)));
+  }
+}
+
+async function escolherSerie(id, temporada) {
+  const { data, error } = await banco.functions.invoke("tmdb", { body: { tipo: "serie", id } });
+
+  if (error) {
+    avisar("Não consegui trazer os detalhes da série.");
+    return;
+  }
+
+  limparTmdbSerie();
+  dadosTmdbSerie = { tmdb_id: data.tmdb_id, tmdb_generos: data.generos, nota_tmdb: data.nota_tmdb };
+  elemento("serie-titulo").value = temporada ? `${data.titulo} S${temporada}` : data.titulo;
+
+  for (const genero of data.generos) {
+    elemento("generos-tmdb-serie").appendChild(
+      criarBotao(genero, () => { elemento("serie-genero").value = genero; })
+    );
+  }
+
+  avisar(`Dados preenchidos (${data.temporadas ?? "?"} temporadas no TMDB). Confira antes de salvar.`);
+}
+
+function aoEditarTituloSerie() {
+  if (dadosTmdbSerie.tmdb_id) elemento("serie-genero").value = "";
+  limparTmdbSerie();
+}
+
+elemento("buscar-tmdb-serie").addEventListener("click", buscarSerieNoTmdb);
+elemento("serie-titulo").addEventListener("input", aoEditarTituloSerie);
+
+elemento("form-serie").addEventListener("reset", () => {
+  limparTmdbSerie();
+  setTimeout(() => { elemento("serie-inicio").value = hoje(); });
+});
+
+// 10. Painel
+const graficos = {};
+
+function criarCartao(rotulo, valor) {
+  const cartao = document.createElement("div");
+  cartao.className = "kpi";
+  const numero = document.createElement("strong");
+  numero.textContent = valor ?? "-";
+  cartao.append(numero, rotulo);
+  return cartao;
+}
+
+function desenharGrafico(id, tipo, rotulos, valores, titulo, opcoes = {}) {
+  graficos[id]?.destroy();
+  graficos[id] = new Chart(elemento(id), {
+    type: tipo,
+    data: {
+      labels: rotulos,
+      datasets: [{ label: titulo, data: valores, backgroundColor: "#8fb0e3" }],
+    },
+    options: {
+      plugins: { title: { display: true, text: titulo }, legend: { display: false } },
+      ...opcoes,
+    },
+  });
+}
+
+async function carregarPainel() {
+  const [geral, anos, generos] = await Promise.all([
+    banco.from("kpi_geral").select("*").single(),
+    banco.from("kpi_ano").select("*").order("ano"),
+    banco.from("kpi_genero").select("*").order("filmes", { ascending: false }).limit(8),
+  ]);
+
+  if (geral.error || anos.error || generos.error) {
+    avisar("Não consegui carregar o painel.");
+    return;
+  }
+
+  const k = geral.data;
+  elemento("kpis").replaceChildren(
+    criarCartao("Filmes", k.filmes),
+    criarCartao("Nota média", k.nota_media),
+    criarCartao("Horas", k.horas),
+    criarCartao("Favoritos", k.favoritos)
+  );
+
+  desenharGrafico("grafico-ano", "bar",
+    anos.data.map((linha) => String(linha.ano)),
+    anos.data.map((linha) => linha.filmes),
+    "Filmes por ano");
+
+  desenharGrafico("grafico-genero", "bar",
+    generos.data.map((linha) => linha.genero),
+    generos.data.map((linha) => linha.filmes),
+    "Gêneros mais vistos",
+    { indexAxis: "y" });
+}
+
+// 11. Tema claro e escuro
+function aplicarTema(tema) {
+  document.documentElement.dataset.tema = tema;
+  elemento("trocar-tema").textContent = tema === "escuro" ? "Modo claro" : "Modo escuro";
+
+  const estilo = getComputedStyle(document.documentElement);
+  Chart.defaults.color = estilo.getPropertyValue("--cor-texto").trim();
+  Chart.defaults.borderColor = estilo.getPropertyValue("--cor-linha").trim();
+  if (Object.keys(graficos).length > 0) carregarPainel();
+}
+
+elemento("trocar-tema").addEventListener("click", () => {
+  const novoTema = document.documentElement.dataset.tema === "escuro" ? "claro" : "escuro";
+  localStorage.setItem("tema", novoTema);
+  aplicarTema(novoTema);
+});
 
 function hoje() {
   const agora = new Date();
@@ -246,6 +412,7 @@ function hoje() {
 
 // 8. Início: verifica se já existe uma sessão aberta
 async function iniciar() {
+  aplicarTema(document.documentElement.dataset.tema);
   elemento("data").value = hoje();
   elemento("serie-inicio").value = hoje();
   const { data } = await banco.auth.getSession();
