@@ -2,6 +2,7 @@
 const URL_SUPABASE = "https://omdjovzztlopcwemmklf.supabase.co";
 const CHAVE_PUBLICAVEL = "sb_publishable_dj9sF1vqTv9RP6LQq5m_ow_LSNhzDiS";
 const banco = supabase.createClient(URL_SUPABASE, CHAVE_PUBLICAVEL);
+const ESPERA_BUSCA_MS = 250;
 
 // 2. Atalhos para elementos da página
 const elemento = (id) => document.getElementById(id);
@@ -258,7 +259,7 @@ function aoEditarTitulo() {
 elemento("titulo").addEventListener("input", () => {
   aoEditarTitulo();
   clearTimeout(esperaFilme);
-  esperaFilme = setTimeout(buscarNoTmdb, 500);
+  esperaFilme = setTimeout(buscarNoTmdb, ESPERA_BUSCA_MS);
 });
 
 elemento("form-filme").addEventListener("reset", () => {
@@ -343,7 +344,7 @@ function aoEditarTituloSerie() {
 elemento("serie-titulo").addEventListener("input", () => {
   aoEditarTituloSerie();
   clearTimeout(esperaSerie);
-  esperaSerie = setTimeout(buscarSerieNoTmdb, 500);
+  esperaSerie = setTimeout(buscarSerieNoTmdb, ESPERA_BUSCA_MS);
 });
 
 elemento("form-serie").addEventListener("reset", () => {
