@@ -29,10 +29,13 @@
       <h2>Registrar filme</h2>
       <form id="form-filme">
         <label>Título <input id="titulo" required></label>
+        <button id="buscar-tmdb" type="button" class="secundario">Buscar no TMDB</button>
+        <div id="candidatos" class="opcoes"></div>
         <label>Nota de 0 a 10 <input id="nota" type="number" min="0" max="10" step="0.05" required></label>
         <label>Data em que assistiu <input id="data" type="date" required></label>
         <label>Gênero <input id="genero" list="generos"></label>
         <datalist id="generos"></datalist>
+        <div id="generos-tmdb" class="opcoes"></div>
         <label>Duração (min) <input id="minutos" type="number" min="1" step="1"></label>
         <label>Ano de lançamento <input id="lancamento" type="number" min="1880" max="2100" step="1"></label>
         <label>Plataforma <input id="plataforma" list="plataformas"></label>

@@ -127,7 +127,7 @@ elemento("form-filme").addEventListener("submit", async (evento) => {
     plataforma: textoOuNulo(elemento("plataforma").value),
   };
 
-  const { error } = await banco.from("filmes").insert(novoFilme);
+  const { error } = await banco.from("filmes").insert({ ...novoFilme, ...dadosTmdb });
 
   if (error) {
     avisar("Não foi possível salvar: " + error.message);
@@ -167,6 +167,75 @@ elemento("form-serie").addEventListener("submit", async (evento) => {
   evento.target.reset();
   elemento("serie-inicio").value = hoje();
 });
+
+// 9. Busca no TMDB
+let dadosTmdb = {};
+
+function limparTmdb() {
+  dadosTmdb = {};
+  elemento("candidatos").replaceChildren();
+  elemento("generos-tmdb").replaceChildren();
+}
+
+function criarBotao(texto, aoClicar) {
+  const botao = document.createElement("button");
+  botao.type = "button";
+  botao.className = "secundario";
+  botao.textContent = texto;
+  botao.addEventListener("click", aoClicar);
+  return botao;
+}
+
+async function buscarNoTmdb() {
+  const titulo = textoOuNulo(elemento("titulo").value);
+  if (!titulo) {
+    avisar("Digite o título antes de buscar.");
+    return;
+  }
+
+  avisar("Buscando...");
+  const { data, error } = await banco.functions.invoke("tmdb", { body: { titulo } });
+
+  if (error) {
+    avisar("A busca no TMDB falhou. Preencha os campos manualmente.");
+    return;
+  }
+
+  avisar(data.candidatos.length ? "Escolha o filme certo:" : "Nenhum filme encontrado.");
+  limparTmdb();
+
+  for (const candidato of data.candidatos) {
+    const texto = `${candidato.titulo} (${candidato.ano_lancamento ?? "sem ano"})`;
+    elemento("candidatos").appendChild(criarBotao(texto, () => escolherFilme(candidato.id)));
+  }
+}
+
+async function escolherFilme(id) {
+  const { data, error } = await banco.functions.invoke("tmdb", { body: { id } });
+
+  if (error) {
+    avisar("Não consegui trazer os detalhes do filme.");
+    return;
+  }
+
+  limparTmdb();
+  dadosTmdb = { tmdb_id: data.tmdb_id, tmdb_generos: data.generos, nota_tmdb: data.nota_tmdb };
+
+  elemento("titulo").value = data.titulo;
+  elemento("minutos").value = data.minutos ?? "";
+  elemento("lancamento").value = data.ano_lancamento ?? "";
+
+  for (const genero of data.generos) {
+    elemento("generos-tmdb").appendChild(
+      criarBotao(genero, () => { elemento("genero").value = genero; })
+    );
+  }
+
+  avisar("Dados preenchidos. Confira antes de salvar.");
+}
+
+elemento("buscar-tmdb").addEventListener("click", buscarNoTmdb);
+elemento("titulo").addEventListener("input", limparTmdb);
 
 function hoje() {
   const agora = new Date();
