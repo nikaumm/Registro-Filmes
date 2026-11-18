@@ -1,0 +1,3 @@
+*.csv
+preparar_dados.py
+.env

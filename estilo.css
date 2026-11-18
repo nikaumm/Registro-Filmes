@@ -1,0 +1,60 @@
+body {
+  margin: 0;
+  background: #f6f7fb;
+  color: #343a55;
+  font-family: Arial, sans-serif;
+}
+
+main {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+form {
+  display: grid;
+  gap: 12px;
+}
+
+label {
+  display: grid;
+  gap: 4px;
+  font-weight: bold;
+}
+
+input {
+  padding: 10px;
+  font: inherit;
+  border: 1px solid #cfd5e6;
+  border-radius: 8px;
+}
+
+button {
+  padding: 12px;
+  font: inherit;
+  font-weight: bold;
+  color: white;
+  background: #4f6bb0;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+button.secundario {
+  color: #4f6bb0;
+  background: transparent;
+}
+
+li {
+  padding: 8px 0;
+  border-bottom: 1px solid #dfe3ef;
+}
+.campo-senha {
+  display: flex;
+  gap: 8px;
+}
+
+.campo-senha input {
+  flex: 1;
+  min-width: 0;
+}
