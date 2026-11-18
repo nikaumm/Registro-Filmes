@@ -52,6 +52,37 @@ async function carregarUltimos() {
   }
 }
 
+function periodoSerie(serie) {
+  if (serie.inicio && serie.fim) return `${serie.inicio} a ${serie.fim}`;
+  if (serie.inicio) return `desde ${serie.inicio}`;
+  if (serie.fim) return `terminou em ${serie.fim}`;
+  return "sem data";
+}
+
+async function carregarUltimasSeries() {
+  const { data, error } = await banco
+    .from("series")
+    .select("titulo, nota, inicio, fim, status")
+    .not("titulo", "is", null)
+    .order("id", { ascending: false })
+    .limit(5);
+
+  if (error) {
+    avisar("Não consegui ler as séries: " + error.message);
+    return;
+  }
+
+  const lista = elemento("ultimas-series");
+  lista.replaceChildren();
+
+  for (const serie of data) {
+    const item = document.createElement("li");
+    const situacao = serie.status === "Em andamento" ? "em andamento" : `nota ${serie.nota}`;
+    item.textContent = `${serie.titulo}: ${situacao} (${periodoSerie(serie)})`;
+    lista.appendChild(item);
+  }
+}
+
 async function preencherSugestoes(coluna, idLista) {
   const { data, error } = await banco.from(coluna === "genero" ? "kpi_genero" : "kpi_plataforma").select(coluna);
   if (error) return;
@@ -69,6 +100,7 @@ async function preencherSugestoes(coluna, idLista) {
 async function carregarTudo() {
   await Promise.all([
     carregarUltimos(),
+    carregarUltimasSeries(),
     carregarPainel(),
     preencherSugestoes("genero", "generos"),
     preencherSugestoes("plataforma", "plataformas"),
@@ -170,6 +202,7 @@ elemento("form-serie").addEventListener("submit", async (evento) => {
   evento.target.reset();
   elemento("serie-inicio").value = hoje();
   limparTmdbSerie();
+  await carregarUltimasSeries();
 });
 
 // 9. Busca no TMDB
