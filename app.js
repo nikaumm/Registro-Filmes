@@ -1,6 +1,6 @@
 // 1. Configuração do projeto
-const URL_SUPABASE = "https://SEU-PROJETO.supabase.co";
-const CHAVE_PUBLICAVEL = "sb_publishable_COLE_AQUI";
+const URL_SUPABASE = "https://omdjovzztlopcwemmklf.supabase.co";
+const CHAVE_PUBLICAVEL = "sb_publishable_dj9sF1vqTv9RP6LQq5m_ow_LSNhzDiS";
 const banco = supabase.createClient(URL_SUPABASE, CHAVE_PUBLICAVEL);
 
 // 2. Atalhos para elementos da página
