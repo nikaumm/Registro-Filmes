@@ -20,6 +20,10 @@
   /* Campos e blocos */
   --cor-campo: #ffffff;
   --cor-bloco: #ffffff;
+
+  /* Aviso de banco pausado */
+  --cor-alerta-fundo: #fff4d6;
+  --cor-alerta-borda: #e8c76a;
 }
 
 :root[data-tema="escuro"] {
@@ -35,6 +39,8 @@
   --cor-cartao-verde: #2d5546;
   --cor-campo: #262a3a;
   --cor-bloco: #23273a;
+  --cor-alerta-fundo: #3d3520;
+  --cor-alerta-borda: #a8893a;
 }
 
 body {
@@ -100,6 +106,26 @@ button.secundario {
 li {
   padding: 8px 0;
   border-bottom: 1px solid var(--cor-linha);
+}
+
+.alerta {
+  margin: 16px 0;
+  padding: 4px 16px;
+  background: var(--cor-alerta-fundo);
+  border: 1px solid var(--cor-alerta-borda);
+  border-radius: 12px;
+}
+
+.alerta p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.alerta a {
+  color: inherit;
+  font-weight: bold;
 }
 
 .campo-senha {

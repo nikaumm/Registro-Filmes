@@ -10,6 +10,51 @@ function avisar(mensagem) {
   elemento("aviso").textContent = mensagem;
 }
 
+// 2b. Aviso de banco pausado
+// O Supabase gratuito pausa o projeto depois de 7 dias sem uso.
+// Pausado, o servidor não responde e toda chamada falha antes de chegar ao banco.
+function ehFalhaDeConexao(error) {
+  if (!error) return false;
+  if (error.name === "AuthRetryableFetchError" || error.name === "FunctionsFetchError") return true;
+  return /failed to fetch|networkerror|load failed|fetch failed/i.test(error.message ?? "");
+}
+
+function mostrarPausado() {
+  elemento("aviso-pausado-texto").textContent = navigator.onLine
+    ? "O banco de dados não respondeu. Provavelmente o projeto do Supabase está pausado " +
+      "(projetos gratuitos pausam depois de 7 dias sem uso). Abra o painel, clique em " +
+      "\"Restore project\", espere alguns minutos e tente de novo."
+    : "Você está sem internet. Confira a conexão e tente de novo.";
+  elemento("aviso-pausado").hidden = false;
+  avisar("");
+}
+
+// Mostra o erro: se for falha de conexão, abre o aviso de banco pausado.
+// mostrarDetalhe = false esconde a mensagem técnica do erro.
+function explicarErro(texto, error, mostrarDetalhe = true) {
+  if (ehFalhaDeConexao(error)) {
+    mostrarPausado();
+    return;
+  }
+  avisar(mostrarDetalhe && error?.message ? `${texto}: ${error.message}` : `${texto}.`);
+}
+
+// Pergunta ao servidor se ele está no ar, sem precisar de login.
+async function verificarServidor() {
+  try {
+    const resposta = await fetch(`${URL_SUPABASE}/auth/v1/health`, {
+      headers: { apikey: CHAVE_PUBLICAVEL },
+    });
+    if (resposta.status >= 500) mostrarPausado();
+  } catch {
+    mostrarPausado();
+  }
+}
+
+const idProjeto = new URL(URL_SUPABASE).hostname.split(".")[0];
+elemento("link-supabase").href = `https://supabase.com/dashboard/project/${idProjeto}`;
+elemento("tentar-de-novo").addEventListener("click", () => location.reload());
+
 function numeroOuNulo(valor) {
   return valor === "" ? null : Number(valor);
 }
@@ -36,7 +81,7 @@ async function carregarUltimos() {
     .limit(5);
 
   if (error) {
-    avisar("Não consegui ler os filmes: " + error.message);
+    explicarErro("Não consegui ler os filmes", error);
     return;
   }
 
@@ -67,7 +112,7 @@ async function carregarUltimasSeries() {
     .limit(5);
 
   if (error) {
-    avisar("Não consegui ler as séries: " + error.message);
+    explicarErro("Não consegui ler as séries", error);
     return;
   }
 
@@ -92,7 +137,7 @@ async function carregarSeriesEmAndamento() {
     .order("inicio", { ascending: false });
 
   if (error) {
-    avisar("Não consegui ler as séries em andamento: " + error.message);
+    explicarErro("Não consegui ler as séries em andamento", error);
     return;
   }
 
@@ -159,7 +204,7 @@ async function concluirSerie(serie, notaTexto, fim) {
     .eq("id", serie.id);
 
   if (error) {
-    avisar("Não foi possível concluir: " + error.message);
+    explicarErro("Não foi possível concluir", error);
     return;
   }
 
@@ -216,7 +261,8 @@ elemento("form-login").addEventListener("submit", async (evento) => {
   });
 
   if (error) {
-    avisar("Não foi possível entrar. Confira e-mail e senha.");
+    if (ehFalhaDeConexao(error)) mostrarPausado();
+    else avisar("Não foi possível entrar. Confira e-mail e senha.");
     return;
   }
 
@@ -249,7 +295,7 @@ elemento("form-filme").addEventListener("submit", async (evento) => {
   const { error } = await banco.from("filmes").insert({ ...novoFilme, ...dadosTmdb });
 
   if (error) {
-    avisar("Não foi possível salvar: " + error.message);
+    explicarErro("Não foi possível salvar", error);
     return;
   }
 
@@ -279,7 +325,7 @@ elemento("form-serie").addEventListener("submit", async (evento) => {
   const { error } = await banco.from("series").insert({ ...novaSerie, ...dadosTmdbSerie });
 
   if (error) {
-    avisar("Não foi possível salvar: " + error.message);
+    explicarErro("Não foi possível salvar", error);
     return;
   }
 
@@ -326,7 +372,7 @@ async function buscarNoTmdb() {
   if (minhaBusca !== ultimaBuscaFilme) return;
 
   if (error) {
-    avisar("A busca no TMDB falhou. Preencha os campos manualmente.");
+    explicarErro("A busca no TMDB falhou. Preencha os campos manualmente", error, false);
     return;
   }
 
@@ -345,7 +391,7 @@ async function escolherFilme(id) {
   const { data, error } = await banco.functions.invoke("tmdb", { body: { id } });
 
   if (error) {
-    avisar("Não consegui trazer os detalhes do filme.");
+    explicarErro("Não consegui trazer os detalhes do filme", error, false);
     return;
   }
 
@@ -418,7 +464,7 @@ async function buscarSerieNoTmdb() {
   if (minhaBusca !== ultimaBuscaSerie) return;
 
   if (error) {
-    avisar("A busca no TMDB falhou. Preencha os campos manualmente.");
+    explicarErro("A busca no TMDB falhou. Preencha os campos manualmente", error, false);
     return;
   }
 
@@ -437,7 +483,7 @@ async function escolherSerie(id, temporada) {
   const { data, error } = await banco.functions.invoke("tmdb", { body: { tipo: "serie", id } });
 
   if (error) {
-    avisar("Não consegui trazer os detalhes da série.");
+    explicarErro("Não consegui trazer os detalhes da série", error, false);
     return;
   }
 
@@ -504,8 +550,9 @@ async function carregarPainel() {
     banco.from("kpi_genero").select("*").order("filmes", { ascending: false }).limit(8),
   ]);
 
-  if (geral.error || anos.error || generos.error) {
-    avisar("Não consegui carregar o painel.");
+  const erro = geral.error || anos.error || generos.error;
+  if (erro) {
+    explicarErro("Não consegui carregar o painel", erro, false);
     return;
   }
 
@@ -558,6 +605,7 @@ async function iniciar() {
   aplicarTema(document.documentElement.dataset.tema);
   elemento("data").value = hoje();
   elemento("serie-inicio").value = hoje();
+  verificarServidor();
   const { data } = await banco.auth.getSession();
   const logado = Boolean(data.session);
   mostrarTelas(logado);
