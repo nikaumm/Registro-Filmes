@@ -46,7 +46,6 @@
           <h2>Registrar filme</h2>
           <form id="form-filme">
             <label>Título <input id="titulo" required></label>
-            <button id="buscar-tmdb" type="button" class="secundario">Buscar no TMDB</button>
             <div id="candidatos" class="opcoes"></div>
             <label>Nota de 0 a 10 <input id="nota" type="number" min="0" max="10" step="0.05" required></label>
             <label>Data em que assistiu <input id="data" type="date" required></label>
@@ -69,7 +68,6 @@
           <h2>Registrar série</h2>
           <form id="form-serie">
             <label>Série e temporada <input id="serie-titulo" required></label>
-            <button id="buscar-tmdb-serie" type="button" class="secundario">Buscar no TMDB</button>
             <div id="candidatos-serie" class="opcoes"></div>
             <label>Nota (em branco se ainda está vendo) <input id="serie-nota" type="number" min="0" max="10" step="0.05"></label>
             <label>Início <input id="serie-inicio" type="date" required></label>
@@ -80,6 +78,9 @@
             <button type="submit">Salvar série</button>
             <button type="reset" class="secundario">Limpar campos</button>
           </form>
+
+          <h2>Em andamento</h2>
+          <ul id="series-andamento"></ul>
 
           <h2>Últimas séries</h2>
           <ol id="ultimas-series"></ol>

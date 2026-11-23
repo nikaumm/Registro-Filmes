@@ -159,6 +159,22 @@ li {
   border-radius: 12px;
 }
 
+.andamento {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.andamento span {
+  grid-column: 1 / -1;
+  font-weight: bold;
+}
+
+.andamento input {
+  min-width: 0;
+}
+
 @media (min-width: 900px) {
   .graficos,
   .registros {

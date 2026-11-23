@@ -1,8 +1,7 @@
 // 1. Configuração do projeto
-const URL_SUPABASE = "https://omdjovzztlopcwemmklf.supabase.co";
-const CHAVE_PUBLICAVEL = "sb_publishable_dj9sF1vqTv9RP6LQq5m_ow_LSNhzDiS";
+const URL_SUPABASE = "https://SEU-PROJETO.supabase.co";
+const CHAVE_PUBLICAVEL = "sb_publishable_COLE_AQUI";
 const banco = supabase.createClient(URL_SUPABASE, CHAVE_PUBLICAVEL);
-const ESPERA_BUSCA_MS = 250;
 
 // 2. Atalhos para elementos da página
 const elemento = (id) => document.getElementById(id);
@@ -83,6 +82,91 @@ async function carregarUltimasSeries() {
   }
 }
 
+// Séries em andamento
+async function carregarSeriesEmAndamento() {
+  const { data, error } = await banco
+    .from("series")
+    .select("id, titulo, inicio")
+    .eq("status", "Em andamento")
+    .not("titulo", "is", null)
+    .order("inicio", { ascending: false });
+
+  if (error) {
+    avisar("Não consegui ler as séries em andamento: " + error.message);
+    return;
+  }
+
+  const lista = elemento("series-andamento");
+  lista.replaceChildren();
+
+  if (data.length === 0) {
+    const item = document.createElement("li");
+    item.textContent = "Nenhuma série em andamento.";
+    lista.appendChild(item);
+    return;
+  }
+
+  for (const serie of data) {
+    lista.appendChild(criarItemAndamento(serie));
+  }
+}
+
+function criarItemAndamento(serie) {
+  const item = document.createElement("li");
+  item.className = "andamento";
+
+  const nome = document.createElement("span");
+  nome.textContent = `${serie.titulo} (desde ${serie.inicio ?? "data desconhecida"})`;
+
+  const nota = document.createElement("input");
+  nota.type = "number";
+  nota.min = "0";
+  nota.max = "10";
+  nota.step = "0.05";
+  nota.placeholder = "Nota";
+  nota.setAttribute("aria-label", `Nota de ${serie.titulo}`);
+
+  const fim = document.createElement("input");
+  fim.type = "date";
+  fim.value = hoje();
+  fim.setAttribute("aria-label", `Fim de ${serie.titulo}`);
+
+  const botao = criarBotao("Concluir", () => concluirSerie(serie, nota.value, fim.value));
+
+  item.append(nome, nota, fim, botao);
+  return item;
+}
+
+async function concluirSerie(serie, notaTexto, fim) {
+  const nota = Number(notaTexto);
+
+  if (notaTexto === "" || nota < 0 || nota > 10) {
+    avisar("Informe uma nota de 0 a 10.");
+    return;
+  }
+  if (!fim) {
+    avisar("Informe a data de término.");
+    return;
+  }
+  if (serie.inicio && fim < serie.inicio) {
+    avisar("O fim precisa ser depois do início.");
+    return;
+  }
+
+  const { error } = await banco
+    .from("series")
+    .update({ nota, fim, ano_referencia: Number(fim.slice(0, 4)) })
+    .eq("id", serie.id);
+
+  if (error) {
+    avisar("Não foi possível concluir: " + error.message);
+    return;
+  }
+
+  avisar(`${serie.titulo} foi concluída.`);
+  await Promise.all([carregarSeriesEmAndamento(), carregarUltimasSeries()]);
+}
+
 async function preencherSugestoes(coluna, idLista) {
   const { data, error } = await banco.from(coluna === "genero" ? "kpi_genero" : "kpi_plataforma").select(coluna);
   if (error) return;
@@ -101,6 +185,7 @@ async function carregarTudo() {
   await Promise.all([
     carregarUltimos(),
     carregarUltimasSeries(),
+    carregarSeriesEmAndamento(),
     carregarPainel(),
     preencherSugestoes("genero", "generos"),
     preencherSugestoes("plataforma", "plataformas"),
@@ -202,7 +287,7 @@ elemento("form-serie").addEventListener("submit", async (evento) => {
   evento.target.reset();
   elemento("serie-inicio").value = hoje();
   limparTmdbSerie();
-  await carregarUltimasSeries();
+  await Promise.all([carregarUltimasSeries(), carregarSeriesEmAndamento()]);
 });
 
 // 9. Busca no TMDB
@@ -292,7 +377,7 @@ function aoEditarTitulo() {
 elemento("titulo").addEventListener("input", () => {
   aoEditarTitulo();
   clearTimeout(esperaFilme);
-  esperaFilme = setTimeout(buscarNoTmdb, ESPERA_BUSCA_MS);
+  esperaFilme = setTimeout(buscarNoTmdb, 500);
 });
 
 elemento("form-filme").addEventListener("reset", () => {
@@ -377,7 +462,7 @@ function aoEditarTituloSerie() {
 elemento("serie-titulo").addEventListener("input", () => {
   aoEditarTituloSerie();
   clearTimeout(esperaSerie);
-  esperaSerie = setTimeout(buscarSerieNoTmdb, ESPERA_BUSCA_MS);
+  esperaSerie = setTimeout(buscarSerieNoTmdb, 500);
 });
 
 elemento("form-serie").addEventListener("reset", () => {
