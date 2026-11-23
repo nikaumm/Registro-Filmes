@@ -1,6 +1,6 @@
 # 🎬 Registro de Filmes
 
-Diário pessoal de filmes e séries: registro o que assisto, com nota, data e plataforma,
+Registro pessoal de filmes e séries: registro o que assisto, com nota, data e plataforma,
 e os dados de ano, duração e gêneros vêm automaticamente da API do TMDB.
 
 🔗 **Site:** https://nikaumm.github.io/Registro-Filmes/ (acesso restrito ao dono)
