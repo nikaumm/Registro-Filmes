@@ -5,8 +5,8 @@ e os dados de ano, duração e gêneros vêm automaticamente da API do TMDB.
 
 🔗 **Site:** https://nikaumm.github.io/Registro-Filmes/ (acesso restrito ao dono)
 
-![Tela do site](captura1.png)
-![Tela do site](captura2.png)
+![Tela do site no modo claro](capturaclaro.png)
+![Tela do site no modo escuro](capturaescuro.png)
 
 ## Por que fiz
 
